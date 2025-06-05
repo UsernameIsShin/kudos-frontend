@@ -1,0 +1,75 @@
+/* Base Layer - HTML 요소들의 기본 스타일 */
+@layer base {
+    html {
+        font-family: 'Pretendard', system-ui, sans-serif;
+    }
+
+    body {
+        @apply bg-gray-50 text-gray-900;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        @apply w-2;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-gray-100;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-gray-300 rounded-full;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-gray-400;
+    }
+
+    /* 기본 요소들의 리셋 및 기본 스타일 */
+    * {
+        @apply border-border outline-ring/50;
+    }
+    
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    /* 기본 타이포그래피 */
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-semibold text-gray-900;
+    }
+
+    a {
+        @apply text-blue-600 hover:text-blue-800 transition-colors;
+    }
+
+    /* 포커스 스타일 */
+    button:focus,
+    input:focus,
+    select:focus,
+    textarea:focus {
+        @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+    }
+} 
+
+/* Base Styles */
+
+/* 기본 폰트 설정 - Pretendard 우선 */
+body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
+/* 기본 스타일 리셋 */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* 접근성을 위한 기본 스타일 */
+:focus-visible {
+    outline: 2px solid #2196f3;
+    outline-offset: 2px;
+} 

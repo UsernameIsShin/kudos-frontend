@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, X, User, LogOut, Globe } from 'lucide-react'
+import { X, User, LogOut, Globe } from 'lucide-react'
 import { useAuthStore } from '@/shared/stores/authStore'
 import logger from '@/shared/utils/logger'
+import KendoLocalizationProvider from '@/shared/components/KendoLocalizationProvider'
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -24,12 +25,12 @@ interface BreadcrumbPath {
 }
 
 const getPathLabelMapping = (t: Function): Record<string, string> => ({
-    '/': t('navigation:home'),
-    '/admin': t('navigation:admin'),
+    '/': t('common:navigation.home'),
+    '/admin': t('common:navigation.admin'),
     '/admin/dashboard': t('admin:dashboard.title'),
-    '/user': t('navigation:userSpace'),
+    '/user': t('common:navigation.userSpace'),
     '/user/overview': t('user:overview.title'),
-    '/user/demo': t('navigation:demo'),
+    '/user/demo': t('common:navigation.demo'),
     '/user/demo/photos': t('demo:photoPage.title'),
     '/user/demo/datagrid': t('demo:dataGridPage.title'),
 })
@@ -41,8 +42,9 @@ const generateBreadcrumbs = (pathname: string, pathLabelMapping: Record<string, 
     let currentPath = ''
     for (const segment of pathSegments) {
         currentPath += `/${segment}`
-        const label = pathLabelMapping[currentPath] || pathLabelMapping[segment] || segment.charAt(0).toUpperCase() + segment.slice(1)
-        if (!breadcrumbs.find(bc => bc.path === currentPath)) {
+        const mappedLabel = pathLabelMapping[currentPath]
+        const label = mappedLabel || segment.charAt(0).toUpperCase() + segment.slice(1)
+        if (!breadcrumbs.find(bc => bc.path === currentPath) || mappedLabel) {
             breadcrumbs.push({ label, path: currentPath })
         }
     }
@@ -51,13 +53,13 @@ const generateBreadcrumbs = (pathname: string, pathLabelMapping: Record<string, 
 
 export default function Layout({ variant }: LayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const { t, i18n } = useTranslation(['common', 'navigation', 'auth', 'dashboard', 'overview', 'photoPage'])
+    const { t, i18n } = useTranslation(['common', 'admin', 'user', 'demo', 'auth'])
     const { user, logout } = useAuthStore()
     const location = useLocation()
     const navigate = useNavigate()
 
     const pathLabelMapping = getPathLabelMapping(t)
-    const breadcrumbItems = generateBreadcrumbs(location.pathname, pathLabelMapping, t('navigation:home'))
+    const breadcrumbItems = generateBreadcrumbs(location.pathname, pathLabelMapping, t('common:navigation.home'))
 
     const handleLogout = () => {
         logout()
@@ -78,8 +80,8 @@ export default function Layout({ variant }: LayoutProps) {
 
     const userMenuItems = [
         { label: t('user:overview.title'), href: '/user/overview', icon: '📈' },
-        { label: t('demo:photoPage.title'), href: '/user/demo/photos', icon: '📸' },
-        { label: t('demo:dataGridPage.title'), href: '/user/demo/datagrid', icon: '📊' },
+        { label: t('common:navigation.photoPageLink'), href: '/user/demo/photos', icon: '📸' },
+        { label: t('common:navigation.dataGridPageLink'), href: '/user/demo/datagrid', icon: '🗂️' },
     ]
 
     const menuItems = variant === 'admin' ? adminMenuItems : userMenuItems
@@ -89,7 +91,7 @@ export default function Layout({ variant }: LayoutProps) {
             {/* Mobile sidebar overlay */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+                    className="fixed inset-0 z-40 bg-black/50 lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
@@ -149,12 +151,7 @@ export default function Layout({ variant }: LayoutProps) {
                 <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                            <button
-                                onClick={() => setSidebarOpen(true)}
-                                className="lg:hidden p-1 rounded-md text-gray-500 hover:bg-gray-100 mr-2"
-                            >
-                                <Menu size={20} />
-                            </button>
+
                             <Breadcrumb className={cn("py-1")}>
                                 <BreadcrumbList>
                                     {breadcrumbItems.map((item, index) => (
@@ -197,7 +194,9 @@ export default function Layout({ variant }: LayoutProps) {
 
                 {/* Main content area */}
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6">
-                    <Outlet />
+                    <KendoLocalizationProvider>
+                        <Outlet />
+                    </KendoLocalizationProvider>
                 </main>
             </div>
         </div>

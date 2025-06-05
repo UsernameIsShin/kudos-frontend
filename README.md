@@ -58,7 +58,7 @@ EumWeb V2는 React, TypeScript, Vite를 기반으로 한 현대적인 엔터프�
 
 ### **사전 요구사항**
 
-- Node.js 18+
+- Node.js 24+
 - Bun 1.0+
 - [Bun 설치주소](https://bun.sh/docs/installation)
 

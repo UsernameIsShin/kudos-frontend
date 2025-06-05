@@ -1,0 +1,198 @@
+/* Utilities Layer - 유틸리티 클래스들 */
+@layer utilities {
+    /* 스페이싱 유틸리티 */
+    .mt-safe {
+        margin-top: env(safe-area-inset-top);
+    }
+
+    .mb-safe {
+        margin-bottom: env(safe-area-inset-bottom);
+    }
+
+    .pl-safe {
+        padding-left: env(safe-area-inset-left);
+    }
+
+    .pr-safe {
+        padding-right: env(safe-area-inset-right);
+    }
+
+    /* 텍스트 유틸리티 */
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .text-ellipsis-2 {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+
+    .text-ellipsis-3 {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        overflow: hidden;
+    }
+
+    /* 애니메이션 유틸리티 */
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .animate-slide-up {
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .animate-slide-down {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { 
+            opacity: 0;
+            transform: translateY(20px); 
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0); 
+        }
+    }
+
+    @keyframes slideDown {
+        from { 
+            opacity: 0;
+            transform: translateY(-20px); 
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0); 
+        }
+    }
+
+    /* 인터랙션 유틸리티 */
+    .clickable {
+        @apply cursor-pointer select-none transition-all duration-200;
+    }
+
+    .clickable:hover {
+        @apply scale-105;
+    }
+
+    .clickable:active {
+        @apply scale-95;
+    }
+
+    /* 레이아웃 유틸리티 */
+    .full-screen {
+        @apply fixed inset-0 w-full h-full;
+    }
+
+    .center-absolute {
+        @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2;
+    }
+
+    .center-flex {
+        @apply flex items-center justify-center;
+    }
+
+    /* 숨김/보임 유틸리티 */
+    .show-on-hover {
+        @apply opacity-0 transition-opacity duration-200;
+    }
+
+    .show-on-hover:hover,
+    .group:hover .show-on-hover {
+        @apply opacity-100;
+    }
+
+    /* 스크롤 유틸리티 */
+    .scroll-smooth {
+        scroll-behavior: smooth;
+    }
+
+    .scrollbar-thin {
+        scrollbar-width: thin;
+    }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 포커스 유틸리티 */
+    .focus-ring {
+        @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    }
+
+    .focus-ring-inset {
+        @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset;
+    }
+
+    /* 터치 유틸리티 */
+    .touch-manipulation {
+        touch-action: manipulation;
+    }
+
+    /* 인쇄 유틸리티 */
+    @media print {
+        .print-hidden {
+            display: none !important;
+        }
+
+        .print-visible {
+            display: block !important;
+        }
+
+        .print-break-before {
+            page-break-before: always;
+        }
+
+        .print-break-after {
+            page-break-after: always;
+        }
+    }
+
+    /* 다크모드 유틸리티 */
+    .dark-mode-toggle {
+        @apply transition-colors duration-300;
+    }
+
+    /* 반응형 유틸리티 헬퍼 */
+    .mobile-only {
+        @apply block sm:hidden;
+    }
+
+    .desktop-only {
+        @apply hidden sm:block;
+    }
+
+    .tablet-only {
+        @apply hidden sm:block lg:hidden;
+    }
+
+    /* 커스텀 필터 아이콘 */
+    .custom-filter-icon {
+        pointer-events: none;
+    }
+
+    /* 로딩 스피너 애니메이션 */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+} 

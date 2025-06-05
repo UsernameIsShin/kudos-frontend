@@ -72,7 +72,7 @@ apiClient.interceptors.response.use(
                     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api',
                     withCredentials: true, // HttpOnly 쿠키 전송
                 })
-
+                logger.info('Token refresh response:', refreshResponse.data)
                 const newAccessToken = refreshResponse.data.accessToken
                 authStore.setAccessToken(newAccessToken)
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
@@ -81,7 +81,10 @@ apiClient.interceptors.response.use(
             } catch (refreshError: any) {
                 processQueue(refreshError, null)
                 authStore.logout() // refresh도 실패하면 로그아웃
-                // TODO: 로그인 페이지로 리다이렉트 또는 사용자에게 알림
+                // 사용자에게 알림 표시
+                alert('세션이 만료되었습니다. 다시 로그인해 주세요.')
+                // 로그인 페이지로 리다이렉트
+                window.location.href = '/login'
                 logger.error('Token refresh failed:', refreshError)
                 return Promise.reject(refreshError)
             } finally {

@@ -5,8 +5,7 @@ import HttpApi from 'i18next-http-backend'
 
 
 
-// 정의할 네임스페이스 목록
-// 파일 이름과 일치시킵니다 (예: common.json -> 'common' 네임스페이스)
+// 실제 존재하는 네임스페이스 파일 이름과 일치해야 합니다.
 const namespaces = ['common', 'auth', 'introduction', 'admin', 'user', 'demo']
 
 i18n

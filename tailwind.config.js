@@ -7,6 +7,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
+                sans: ['Pretendard', 'ui-sans-serif', 'system-ui'],
                 'pretendard': ['Pretendard', 'sans-serif'],
                 'kopub-dotum': ['KoPubWorld Dotum', 'sans-serif'],
                 'batang': ['Batang', 'serif'],
