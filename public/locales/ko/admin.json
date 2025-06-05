@@ -1,0 +1,8 @@
+{
+    "dashboard": {
+        "title": "관리자 페이지",
+        "users": "사용자 관리",
+        "statistics": "통계",
+        "activities": "활동 현황"
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "title": "Welcome to EumWeb V2",
+    "subtitle": "Modern Enterprise Web Application",
+    "description": "A responsive web application built with React, TypeScript, and Vite. Features Admin, General User, and Mobile areas with JWT-based authentication and role-based access control.",
+    "features": {
+        "title": "Key Features",
+        "responsive": "Responsive Design",
+        "auth": "JWT Authentication",
+        "rbac": "Role-based Access Control",
+        "i18n": "Internationalization",
+        "charts": "Kendo UI Charts & Grids"
+    },
+    "cta": {
+        "demo": "Try Demo",
+        "login": "Login"
+    }
+}

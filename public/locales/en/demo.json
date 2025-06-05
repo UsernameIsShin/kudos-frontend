@@ -1,0 +1,16 @@
+{
+    "photoPage": {
+        "title": "Photo Album (Page Title)",
+        "galleryTitle": "Random Photo Gallery"
+    },
+    "dataGridPage": {
+        "title": "DataGrid Demo"
+    },
+    "dataGrid": {
+        "productId": "Product ID",
+        "productName": "Product Name",
+        "unitPrice": "Unit Price",
+        "unitsInStock": "Units In Stock",
+        "discontinued": "Discontinued"
+    }
+}

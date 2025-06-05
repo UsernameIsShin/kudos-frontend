@@ -1,0 +1,16 @@
+{
+    "photoPage": {
+        "title": "사진첩 (페이지 제목)",
+        "galleryTitle": "랜덤 사진 갤러리"
+    },
+    "dataGridPage": {
+        "title": "데이터 그리드 데모"
+    },
+    "dataGrid": {
+        "productId": "제품 ID",
+        "productName": "제품명",
+        "unitPrice": "단가",
+        "unitsInStock": "재고 수량",
+        "discontinued": "단종 여부"
+    }
+}

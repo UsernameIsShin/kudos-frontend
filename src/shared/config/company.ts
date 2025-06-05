@@ -1,0 +1,1 @@
+export const DEFAULT_COMPANY_ID = "eumsol"; // 실제 회사 ID로 변경해주세요. 

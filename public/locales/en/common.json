@@ -1,0 +1,39 @@
+{
+    "app": {
+        "title": "EumWeb V2",
+        "description": "Enterprise-grade React Application"
+    },
+    "navigation": {
+        "home": "Home",
+        "login": "Login",
+        "logout": "Logout",
+        "admin": "Admin Space",
+        "userSpace": "User Space",
+        "demo": "Demo Pages",
+        "photoPageLink": "Photo Album (Link)",
+        "dataGridPageLink": "DataGrid (Link)"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "An error occurred",
+        "retry": "Retry",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "search": "Search",
+        "filter": "Filter",
+        "sort": "Sort",
+        "refresh": "Refresh",
+        "back": "Back",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "exportExcel": "Export to Excel"
+    },
+    "languages": {
+        "korean": "한국어",
+        "english": "English"
+    }
+}

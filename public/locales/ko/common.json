@@ -1,0 +1,39 @@
+{
+    "app": {
+        "title": "EumWeb V2",
+        "description": "엔터프라이즈급 React 애플리케이션"
+    },
+    "navigation": {
+        "home": "홈",
+        "login": "로그인",
+        "logout": "로그아웃",
+        "admin": "관리자 영역",
+        "userSpace": "사용자 공간",
+        "demo": "데모 페이지",
+        "photoPageLink": "사진첩 (링크용)",
+        "dataGridPageLink": "데이터그리드 (링크용)"
+    },
+    "common": {
+        "loading": "로딩 중...",
+        "error": "오류가 발생했습니다",
+        "retry": "다시 시도",
+        "cancel": "취소",
+        "confirm": "확인",
+        "save": "저장",
+        "delete": "삭제",
+        "edit": "편집",
+        "add": "추가",
+        "search": "검색",
+        "filter": "필터",
+        "sort": "정렬",
+        "refresh": "새로고침",
+        "back": "뒤로",
+        "startDate": "시작일자",
+        "endDate": "종료일자",
+        "exportExcel": "엑셀로 내보내기"
+    },
+    "languages": {
+        "korean": "한국어",
+        "english": "English"
+    }
+}

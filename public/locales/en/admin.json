@@ -1,0 +1,8 @@
+{
+    "dashboard": {
+        "title": "Admin Dashboard",
+        "users": "User Management",
+        "statistics": "Statistics",
+        "activities": "Activity Status"
+    }
+}
