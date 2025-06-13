@@ -1,7 +1,7 @@
 /* Main CSS Entry Point */
 @import 'tailwindcss';
 @import "tw-animate-css";
-@import '@progress/kendo-theme-material/dist/all.css';
+@import '@progress/kendo-theme-fluent/dist/all.css';
 
 @import './styles/base.css';
 /* EumGrid 커스텀 스타일 */

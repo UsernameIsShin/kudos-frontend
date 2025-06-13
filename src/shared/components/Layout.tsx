@@ -33,6 +33,7 @@ const getPathLabelMapping = (t: Function): Record<string, string> => ({
     '/user/demo': t('common:navigation.demo'),
     '/user/demo/photos': t('demo:photoPage.title'),
     '/user/demo/datagrid': t('demo:dataGridPage.title'),
+    '/user/demo/datagrid-rq': 'React Query DataGrid',
 })
 
 const generateBreadcrumbs = (pathname: string, pathLabelMapping: Record<string, string>, homeLabel: string): BreadcrumbPath[] => {
@@ -62,9 +63,9 @@ export default function Layout({ variant }: LayoutProps) {
     const breadcrumbItems = generateBreadcrumbs(location.pathname, pathLabelMapping, t('common:navigation.home'))
 
     const handleLogout = () => {
-        logout()
+        logout({ reason: 'manual_user_action' })
         navigate('/login')
-        logger.info('User logged out')
+        logger.info('User logged out manually')
     }
 
     const toggleLanguage = () => {
@@ -79,9 +80,10 @@ export default function Layout({ variant }: LayoutProps) {
     ]
 
     const userMenuItems = [
-        { label: t('user:overview.title'), href: '/user/overview', icon: '📈' },
+        { label: t('user:overview.title'), href: '/user/demo/overview', icon: '📈' },
         { label: t('common:navigation.photoPageLink'), href: '/user/demo/photos', icon: '📸' },
-        { label: t('common:navigation.dataGridPageLink'), href: '/user/demo/datagrid', icon: '🗂️' },
+        { label: t('common:navigation.dataGridPageLink'), href: '/user/demo/datagrid', icon: '🗂️' }
+
     ]
 
     const menuItems = variant === 'admin' ? adminMenuItems : userMenuItems

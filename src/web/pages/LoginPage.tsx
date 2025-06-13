@@ -54,12 +54,14 @@ export default function LoginPage() {
             if (isAdmin) {
                 navigate('/admin/dashboard');
             } else {
-                navigate('/user/overview');
+                navigate('/user/demo/overview');
             }
         } catch (error) {
             logger.error('Login failed:', error)
         }
     }
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    logger.debug('API URL:', apiUrl);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

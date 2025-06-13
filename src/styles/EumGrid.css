@@ -1,5 +1,29 @@
 /* EumGrid 전용 스타일 */
 
+/* Kendo UI 폰트 변수 오버라이드 - Pretendard 적용 */
+.k-grid,
+.eum-grid-container .k-grid {
+    --kendo-font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
+    --kendo-font-family-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+    --kendo-font-family-serif: 'Pretendard', Georgia, serif !important;
+    --kendo-font-family-monospace: 'Pretendard', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;
+    
+    /* 폰트 패밀리 직접 적용 */
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+}
+
+/* 모든 Kendo Grid 하위 요소에 폰트 강제 적용 */
+.k-grid *,
+.k-grid .k-grid-header *,
+.k-grid .k-grid-content *,
+.k-grid .k-cell-inner *,
+.k-grid .k-column-title,
+.k-grid .k-link,
+.k-grid td,
+.k-grid th {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+}
+
 /* 텍스트 정렬 클래스 */
 .eum-text-left {
     text-align: left !important;
@@ -19,90 +43,12 @@
 .eum-grid-container .k-grid .k-grid-header .k-header-cell {
     text-align: center !important;
 }
-
-/* 더 구체적인 셀렉터로 Kendo Grid 헤더 강제 정렬 */
-.k-grid-header-wrap .k-grid-header .k-header,
-.k-grid-header-wrap .k-grid-header th,
-.k-grid .k-grid-header-wrap .k-header {
-    text-align: center !important;
-}
-
-/* Material 테마 전용 헤더 정렬 */
-.k-grid.k-grid-md .k-grid-header .k-header,
-.k-grid.k-grid-md .k-grid-header th {
-    text-align: center !important;
-}
-
-/* 최고 우선순위 - 모든 가능한 헤더 셀렉터 */
-.k-grid th,
-.k-grid .k-header,
-.k-grid .k-grid-header th,
-.k-grid .k-grid-header .k-header,
-.k-grid .k-grid-header .k-header-cell,
-.k-grid .k-grid-header-wrap th,
-.k-grid .k-grid-header-wrap .k-header,
-.k-grid-header th,
-.k-grid-header .k-header,
-.k-grid-header .k-header-cell {
-    text-align: center !important;
-}
-
-/* Kendo Grid 실제 DOM 구조에 맞는 헤더 정렬 */
-.k-grid .k-cell-inner {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    position: relative !important; /* 상대 위치 설정 */
-}
-
-.k-grid .k-cell-inner .k-link {
-    flex: 1 !important;
-    text-align: center !important;
-    display: flex !important;
-    justify-content: center !important;
-    padding-right: 0 !important; /* 패딩 제거 */
-}
-
-.k-grid .k-cell-inner .k-column-title {
-    text-align: center !important;
-    width: 100% !important;
-    display: block !important;
-}
-
-/* 컬럼 메뉴를 완전한 오른쪽 끝에 배치 */
-.k-grid .k-cell-inner .k-grid-header-menu,
-.k-grid .k-cell-inner .k-grid-column-menu {
-    position: absolute !important;
-    right: 3px !important; /* 오른쪽 끝에서 1px 떨어진 위치 */
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    z-index: 10 !important; /* 다른 요소 위에 표시 */
-    margin: 0 !important;
-    padding: 4px !important;
-    background: transparent !important;
-}
-
+ 
 /* 컬럼 메뉴 호버 효과 */
 .k-grid .k-cell-inner .k-grid-header-menu:hover,
 .k-grid .k-cell-inner .k-grid-column-menu:hover {
     background-color: rgba(0, 0, 0, 0.05) !important;
     border-radius: 4px !important;
-}
-
-/* 헤더 셀 자체도 relative 포지션 */
-.k-grid .k-header,
-.k-grid th {
-    position: relative !important;
-}
-
-/* 추가 보장을 위한 강력한 셀렉터 */
-.k-grid thead th .k-cell-inner,
-.k-grid .k-grid-header .k-header .k-cell-inner,
-.k-grid .k-grid-header th .k-cell-inner {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
 }
 
 .k-grid thead th .k-column-title,
@@ -112,18 +58,23 @@
     flex: 1 !important;
 }
 
-/* 브라우저별 호환성 */
-.k-grid thead th,
-.k-grid thead .k-header,
-.k-grid table thead th,
-.k-grid table thead .k-header {
-    text-align: center !important;
+/* 폰트 변경 유틸리티 클래스 */
+.eum-grid-font-pretendard {
+    --kendo-font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
 }
 
-/* CSS 변수 오버라이드 (만약 Kendo가 CSS 변수를 사용한다면) */
-.k-grid {
-    --kendo-grid-header-text-align: center;
+.eum-grid-font-kopub {
+    --kendo-font-family: 'KoPubWorld Dotum', 'Noto Sans KR', sans-serif !important;
 }
+
+.eum-grid-font-batang {
+    --kendo-font-family: 'Batang', 'Noto Serif KR', serif !important;
+}
+
+.eum-grid-font-system {
+    --kendo-font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+}
+ 
 
 /* 인라인 스타일보다 높은 우선순위 */
 .k-grid [style*="text-align"] th,
@@ -131,27 +82,40 @@
     text-align: center !important;
 }
 
+
 /* 컬럼 헤더 구분선 - 강화된 헤더 스타일 */
 .k-grid .k-grid-header .k-header,
 .k-grid .k-grid-header th,
 .k-grid .k-grid-header .k-header-cell {
     font-weight: 700 !important; /* 더 굵은 폰트 */
     border-top: 2px solid #3b82f6 !important; /* 파란색 상단 테두리 */
+    border-bottom: 2px solid #3b82f6 !important; /* 파란색 하단 테두리 */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; /* 그림자 효과 */
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important; /* 텍스트 그림자 */
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+    /*background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;*/
+    background: #e2e8f0 !important;
+    height: 18px !important;
+}
+
+.k-grid .k-grid-header .k-header:first-child,
+.k-grid .k-grid-header th:first-child,
+.k-grid .k-grid-header .k-header-cell:first-child {
+    border-radius: 10px 0 0 0px !important;
+    border-right: 2px solid #e2e8f0 !important; 
+    border-left: 2px solid #3b82f6 !important; 
 }
 
 /* 마지막 컬럼은 오른쪽 테두리 적용 */
 .k-grid .k-grid-header .k-header:last-child,
 .k-grid .k-grid-header th:last-child,
 .k-grid .k-grid-header .k-header-cell:last-child {
-    border-right: 3px solid #e2e8f0 !important; 
+    border-right: 2px solid #e2e8f0 !important; 
 }
 
 /* 데이터 셀 오른쪽 구분선 - 회색 1px */
 .k-grid .k-grid-content .k-table-td,
 .k-grid .k-grid-content td {
+ 
     border-right: 1px dashed #d1d5db !important; /* 회색 1px 점선 구분선 */
 }
 
@@ -178,4 +142,85 @@
     color: #3b82f6 !important;
     font-weight: bold !important;
 }
+
+/* Webkit 기반 브라우저 (Chrome, Safari, Edge) 스크롤바 */
+.k-grid .k-grid-content::-webkit-scrollbar {
+    height: 8px !important; /* 가로 스크롤바 높이 (기본값: 16px) */
+    width: 8px !important; /* 세로 스크롤바 너비 */
+}
+
+.k-grid .k-grid-content::-webkit-scrollbar-track {
+    background: #f1f5f9 !important; /* 스크롤바 트랙 배경색 */
+    border-radius: 4px !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.k-grid .k-grid-content::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5) !important; /* 연한 파란색 반투명 */
+    border-radius: 4px !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.k-grid .k-grid-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.7) !important; /* 호버 시 조금 더 진한 파란색 */
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.4) !important;
+}
+
+.k-grid .k-grid-content::-webkit-scrollbar-thumb:active {
+    background: rgba(59, 130, 246, 0.9) !important; /* 클릭 시 가장 진한 파란색 */
+}
+
+.k-grid .k-grid-content::-webkit-scrollbar-corner {
+    background: #f1f5f9 !important; /* 스크롤바 모서리 색상 */
+}
+
+/* Firefox 브라우저 스크롤바 */
+.k-grid .k-grid-content {
+    scrollbar-width: thin !important; /* Firefox 스크롤바 두께 (auto, thin, none) */
+    scrollbar-color: rgba(59, 130, 246, 0.5) #f1f5f9 !important; /* Firefox 스크롤바 색상 (연한 파란색 반투명) */
+}
+
+/* 추가 스타일 - 스크롤바가 나타날 때 부드러운 전환 효과 */
+.k-grid .k-grid-content {
+    transition: scrollbar-color 0.2s ease !important;
+}
+
+/* 스크롤바 호버 시 그리드 전체에 약간의 그림자 효과 */
+.k-grid:hover .k-grid-content::-webkit-scrollbar-thumb {
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* EumGrid 컨테이너에 특별한 스크롤바 스타일 적용 */
+.eum-grid-container .k-grid .k-grid-content::-webkit-scrollbar {
+    height: 6px !important; /* EumGrid에서는 더욱 얇게 */
+    width: 6px !important;
+}
+
+.eum-grid-container .k-grid .k-grid-content::-webkit-scrollbar-thumb {
+    background: rgba(147, 197, 253, 0.6) !important; /* EumGrid에서는 더 연한 하늘색 반투명 */
+    border: none !important;
+}
+
+.eum-grid-container .k-grid .k-grid-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(147, 197, 253, 0.8) !important;
+}
+
+.eum-grid-container .k-grid .k-grid-content {
+    scrollbar-color: rgba(147, 197, 253, 0.6) #f1f5f9 !important; /* Firefox에서도 연한 하늘색 */
+}
+
+/* 반응형 - 모바일에서는 스크롤바를 더 두껍게 */
+@media (max-width: 768px) {
+    .k-grid .k-grid-content::-webkit-scrollbar {
+        height: 12px !important;
+        width: 12px !important;
+    }
+    
+    .eum-grid-container .k-grid .k-grid-content::-webkit-scrollbar {
+        height: 10px !important;
+        width: 10px !important;
+    }
+}
+
  

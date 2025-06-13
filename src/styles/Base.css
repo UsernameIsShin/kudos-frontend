@@ -2,6 +2,7 @@
 @layer base {
     html {
         font-family: 'Pretendard', system-ui, sans-serif;
+        font-size: 16px; /* 기본 폰트 사이즈 명시적 설정 */
     }
 
     body {

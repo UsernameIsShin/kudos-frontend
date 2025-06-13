@@ -1,5 +1,5 @@
 {
-    "title": "EumWeb V2에 오신 것을 환영합니다",
+    "title": "EumWeb V2",
     "subtitle": "현대적인 엔터프라이즈 웹 애플리케이션",
     "description": "React, TypeScript, Vite를 기반으로 한 반응형 웹 애플리케이션입니다. 관리자, 일반 사용자, 모바일 영역을 지원하며 JWT 기반 인증과 역할 기반 접근 제어를 제공합니다.",
     "features": {

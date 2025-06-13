@@ -1,16 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Grid, GridColumn as Column, GridProps } from '@progress/kendo-react-grid';
 import { process, State, SortDescriptor, CompositeFilterDescriptor } from '@progress/kendo-data-query';
 import {
-    fetchDataGridData,
+    useDataGridQuery,
     DataGridRequest,
     GridColumn,
-    generateTimestamp,
-    createDefaultMetadata,
     convertHeadersToColumns
 } from '@/shared/api/dataGridApi';
 import { EumColumnMenu } from './EumColumnMenu';
-import { useAuthStore } from '@/shared/stores/authStore'
 import logger from '@/shared/utils/logger';
 
 export interface EumDataGridProps extends Omit<GridProps, 'data' | 'children' | 'onSortChange' | 'onFilterChange'> {
@@ -23,6 +20,18 @@ export interface EumDataGridProps extends Omit<GridProps, 'data' | 'children' | 
     onError?: (error: string) => void;
     onDataLoad?: (data: any[]) => void;
 
+    // 데이터 변경 이벤트 콜백들
+    onDataChange?: (data: any[]) => void;
+    onRowAdd?: (newRow: any, allData: any[]) => void;
+    onRowUpdate?: (updatedRow: any, index: number, allData: any[]) => void;
+    onRowRemove?: (removedRow: any, index: number, allData: any[]) => void;
+    onRowSelectionChange?: (selectedRows: number[], selectedData: any[]) => void;
+
+    // 행 선택 및 키 설정
+    keyColumns?: string[]; // 여러 컬럼 조합으로 unique key 생성
+    enableRowSelection?: boolean; // 행 선택 활성화 (기본: false)
+    selectionMode?: 'single'; // 선택 모드  
+
     // 그리드 설정 props
     gridOptions?: {
         height?: string | number;
@@ -32,7 +41,8 @@ export interface EumDataGridProps extends Omit<GridProps, 'data' | 'children' | 
         showResize?: boolean;
         defaultPageSize?: number;
         enablePaging?: boolean;
-
+        isSelectable?: boolean;
+        lockedColumns?: number[]; // 고정 컬럼 인덱스 배열
     };
 
     // 컬럼 커스터마이징
@@ -48,26 +58,52 @@ export interface EumDataGridProps extends Omit<GridProps, 'data' | 'children' | 
     onFilterStateChange?: (filter: CompositeFilterDescriptor | undefined) => void;
 }
 
+// EumDataGrid에 사용될 props의 안정적인 기본값
+const defaultGridOptions: EumDataGridProps['gridOptions'] = {};
+const defaultColumnOverrides: EumDataGridProps['columnOverrides'] = {};
+
 // EumDataGrid 인스턴스 메서드 타입
 export interface EumDataGridRef {
+    // 기존 기능들
     clearFilters: () => void;
     clearSort: () => void;
     resetState: () => void;
     getCurrentState: () => State;
+
+    // 데이터 조회 기능들
+    getData: () => any[];
+    getFilteredData: () => any[];
+    getSelectedData: () => any[];
+    getColumns: () => GridColumn[];
+    // 키 관련 기능들
+    generateRowKey: (row: any) => string;
+    getSelectedKeys: () => string[];
+
+    exportDataWithHeaders: () => { columns: any[], data: any[] };
+    exportSelectedWithHeaders: () => { columns: any[], data: any[] };
+
+    // 선택 관련 기능들
+    refreshData: () => Promise<void>;
+    selectRows: (indices: number[]) => void;
+    selectAll: () => void;
+    unselectAll: () => void;
+    getRowCount: () => number;
 }
 
-/**
- * 커스텀 DataGrid HOC 컴포넌트
- * Kendo DataGrid를 감싸서 서버 데이터 통신과 추가 기능을 제공합니다.
- */
-export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
+
+export const EumDataGrid = React.memo(React.forwardRef<EumDataGridRef, EumDataGridProps>(({
     request,
     loading: externalLoading,
     onLoadingChange,
     onError,
     onDataLoad,
-    gridOptions = {},
-    columnOverrides = {},
+    onDataChange,
+    onRowSelectionChange,
+    keyColumns = [],
+    enableRowSelection = false,
+    selectionMode = 'single',
+    gridOptions = defaultGridOptions,
+    columnOverrides = defaultColumnOverrides,
     className = '',
     containerStyle = {},
     onStateChange,
@@ -75,11 +111,18 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
     onFilterStateChange,
     ...kendoGridProps // 나머지 모든 Kendo Grid props
 }, ref) => {
-    // 상태 관리
-    const [internalLoading, setInternalLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    // React Query를 사용한 데이터 로드 (자동 중복 요청 제거 및 캐싱)
+    const {
+        data: queryResponse,
+        isLoading: queryLoading,
+        error: queryError,
+        refetch
+    } = useDataGridQuery(request);
+
+    // 로컬 상태 관리
     const [columns, setColumns] = useState<GridColumn[]>([]);
     const [data, setData] = useState<any[]>([]);
+    const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
     const [dataState, setDataState] = useState<State>({
         skip: 0,
         take: gridOptions.defaultPageSize || 50,
@@ -89,6 +132,7 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
 
     // 헬퍼 함수들을 ref를 통해 노출
     React.useImperativeHandle(ref, () => ({
+        // 기존 기능들
         clearFilters: () => {
             setDataState(prev => ({ ...prev, filter: undefined }));
             onFilterStateChange?.(undefined);
@@ -105,180 +149,228 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
                 filter: undefined as CompositeFilterDescriptor | undefined,
             };
             setDataState(initialState);
+            // setSelectedRows([]);
             onSortStateChange?.([]);
             onFilterStateChange?.(undefined);
         },
         getCurrentState: () => dataState,
+
+        // 데이터 조작 기능들
+        getData: () => data,
+        getFilteredData: () => processedData.data || [],
+        getSelectedData: () => data.filter(item => selectedKeys.has(item.__dataItemKey)),
+        getColumns: () => columns,
+
+        // 키 관련 기능들 (소문자 기준)
+        generateRowKey: (row: any) => {
+            if (keyColumns.length === 0) {
+                // keyColumns가 지정되지 않으면 모든 컬럼값을 조합
+                return Object.values(row).join('|');
+            }
+            // 지정된 keyColumns의 값들을 조합하여 키 생성 (소문자 기준)
+            return keyColumns.map(col => {
+                const lowerCol = col.toLowerCase();
+                return row[lowerCol] || '';
+            }).join('|');
+        },
+        getSelectedKeys: () => {
+            // const selectedData = selectedRows.map(index => data[index]).filter(Boolean);
+            return Array.from(selectedKeys);
+        },
+
+
+        exportDataWithHeaders: () => {
+            return {
+                columns: columns.filter(col => !col.hidden).map(col => ({
+                    field: col.field,
+                    title: col.title,
+                    type: col.type,
+                    width: col.width
+                })),
+                data: data
+            };
+        },
+        exportSelectedWithHeaders: () => {
+            const selectedData = data.filter(item => selectedKeys.has(item.__dataItemKey));
+            return {
+                columns: columns.filter(col => !col.hidden).map(col => ({
+                    field: col.field,
+                    title: col.title,
+                    type: col.type,
+                    width: col.width
+                })),
+                data: selectedData
+            };
+        },
+
+        // 선택 관련 기능들
+        refreshData: async () => {
+            refetch();
+        },
+        selectRows: (indices: number[]) => {
+            const keysToSelect = new Set(indices.map(i => data[i]?.__dataItemKey).filter(Boolean));
+            setSelectedKeys(keysToSelect);
+        },
+        selectAll: () => {
+            if (enableRowSelection) {
+                const allKeys = new Set(data.map(item => item.__dataItemKey));
+                setSelectedKeys(allKeys);
+            }
+        },
+        unselectAll: () => {
+            setSelectedKeys(new Set());
+        },
+        getRowCount: () => data.length,
     }));
 
-    // 로딩 상태 (외부에서 제어 가능)
-    const isLoading = externalLoading !== undefined ? externalLoading : internalLoading;
+    // 로딩 상태 (외부에서 제어 가능하거나 React Query에서 관리)
+    const isLoading = externalLoading !== undefined ? externalLoading : queryLoading;
 
     // 그리드 옵션 기본값
     const {
-        height = '400px',
+        height = '500px',
         rowheight = 25,
         showFilter = false,
         showSort = true,
         showResize = true,
-        enablePaging = false
+        isSelectable = true,
+        lockedColumns = [], // 고정 컬럼 인덱스 배열
     } = gridOptions;
 
-    // 데이터 로드 함수
-    const loadData = async () => {
-        if (!request.callId) {
-            const errorMsg = 'callId는 필수입니다.';
-            setError(errorMsg);
-            onError?.(errorMsg);
-            return;
-        }
-
-        try {
-            setInternalLoading(true);
-            onLoadingChange?.(true);
-            setError(null);
-
-            logger.info('EumDataGrid 데이터 로드 시작:', request);
-
-            const response = await fetchDataGridData(request);
-
-            // 새로운 API 응답 구조 처리
-            if (response.status === 200 && response.data) {
-                const { headers, datafield, rows } = response.data;
-
-                // 헤더 정보를 GridColumn으로 변환
-                const serverColumns = convertHeadersToColumns(headers, datafield);
-
-                // 디버깅: 컬럼 정보 출력
-                logger.info('컬럼 변환 결과:', {
-                    headers: headers.map(h => ({
-                        seq: h.seq,
-                        columnname: h.columnname,
-                        columnformat: h.columnformat,
-                        width: h.width
-                    })),
-                    convertedColumns: serverColumns.map(c => ({
-                        field: c.field,
-                        title: c.title,
-                        type: c.type,
-                        textAlign: c.textAlign,
-                        className: c.className,
-                        hidden: c.hidden,
-                        width: c.width
-                    }))
-                });
-
-                // 컬럼 오버라이드 적용
-                const processedColumns = serverColumns.map(col => ({
-                    ...col,
-                    ...columnOverrides[col.field],
-                }));
-
-                // 데이터 처리 - 컬럼에 매핑되지 않는 필드는 빈 값으로 처리
-                const processedRows = rows.map(row => {
-                    const processedRow: Record<string, any> = {};
-
-                    // 각 컬럼에 대해 데이터 매핑 및 타입 변환
-                    processedColumns.forEach(col => {
-                        if (row.hasOwnProperty(col.field)) {
-                            let value = row[col.field];
-
-                            // 컬럼 타입에 따른 데이터 변환
-                            switch (col.type) {
-                                case 'number':
-                                    // 숫자 타입인 경우 숫자로 변환 (정렬이 제대로 되도록)
-                                    if (value !== null && value !== undefined && value !== '') {
-                                        const numValue = typeof value === 'string' ? parseFloat(value) : value;
-                                        processedRow[col.field] = isNaN(numValue) ? 0 : numValue;
-                                    } else {
-                                        processedRow[col.field] = 0;
-                                    }
-                                    break;
-                                case 'date':
-                                    // 날짜 타입인 경우 Date 객체로 변환
-                                    if (value && typeof value === 'string') {
-                                        // YYYYMMDD 형식을 Date로 변환
-                                        if (value.length === 8 && /^\d{8}$/.test(value)) {
-                                            const year = parseInt(value.substring(0, 4));
-                                            const month = parseInt(value.substring(4, 6)) - 1; // 월은 0부터 시작
-                                            const day = parseInt(value.substring(6, 8));
-                                            processedRow[col.field] = new Date(year, month, day);
-                                        } else {
-                                            processedRow[col.field] = new Date(value);
-                                        }
-                                    } else {
-                                        processedRow[col.field] = value;
-                                    }
-                                    break;
-                                case 'boolean':
-                                    // 불린 타입 변환
-                                    processedRow[col.field] = Boolean(value);
-                                    break;
-                                default:
-                                    // 문자열 타입 (기본값)
-                                    processedRow[col.field] = value !== null && value !== undefined ? String(value) : '';
-                            }
-                        } else {
-                            // 컬럼 ID에 해당하는 값이 없으면 타입에 따른 기본값
-                            switch (col.type) {
-                                case 'number':
-                                    processedRow[col.field] = 0;
-                                    break;
-                                case 'date':
-                                    processedRow[col.field] = null;
-                                    break;
-                                case 'boolean':
-                                    processedRow[col.field] = false;
-                                    break;
-                                default:
-                                    processedRow[col.field] = '';
-                            }
-                        }
-                    });
-
-                    return processedRow;
-                });
-
-                setColumns(processedColumns);
-                setData(processedRows);
-                onDataLoad?.(processedRows);
-
-                logger.info('EumDataGrid 데이터 로드 완료:', {
-                    columnCount: processedColumns.length,
-                    rowCount: processedRows.length,
-                    hiddenColumns: processedColumns.filter(col => col.hidden).length,
-                    visibleColumns: processedColumns.filter(col => !col.hidden).map(c => ({
-                        field: c.field,
-                        title: c.title,
-                        textAlign: c.textAlign,
-                        className: c.className,
-                        type: c.type,
-                        width: c.width
-                    }))
-                });
-
-
-
-            } else {
-                const errorMsg = response.message || '데이터를 가져오는데 실패했습니다.';
-                setError(errorMsg);
-                onError?.(errorMsg);
-            }
-        } catch (err: any) {
-            const errorMsg = err.message || '예상치 못한 오류가 발생했습니다.';
-            setError(errorMsg);
-            onError?.(errorMsg);
-            logger.error('EumDataGrid 데이터 로드 에러:', err);
-        } finally {
-            setInternalLoading(false);
-            onLoadingChange?.(false);
-        }
+    const filterTypeMap = {
+        number: 'numeric',
+        date: 'date',
+        boolean: 'boolean',
+        string: 'text'
     };
 
-    // request 변경 시 데이터 다시 로드
+    // React Query 응답 처리
     useEffect(() => {
-        loadData();
-    }, [request.callId, JSON.stringify(request.parameters)]);
+        if (queryResponse && queryResponse.status === 200 && queryResponse.data) {
+            const { headers, datafield, rows } = queryResponse.data;
+
+            logger.info('🔄 React Query 데이터 로드 성공:', {
+                callId: request.callId,
+                rowCount: rows.length,
+                columnCount: headers.length,
+                optimized: true, // 1초 단기 캐싱으로 최적화
+                deduplication: 'active' // 중복 요청 제거 활성화
+            });
+
+            // 헤더 정보를 GridColumn으로 변환
+            const serverColumns = convertHeadersToColumns(headers, datafield);
+
+            // 컬럼 오버라이드 적용
+            const processedColumns = serverColumns.map(col => ({
+                ...col,
+                ...columnOverrides[col.field],
+            }));
+
+            // dataItemKey를 위한 키 생성 함수 (소문자 통일)
+            const generateDataItemKey = (lowerCaseRow: Record<string, any>) => {
+                const keyValues = keyColumns.length > 0
+                    ? keyColumns.map(col => (lowerCaseRow[col.toLowerCase()] || '').toString())
+                    : Object.values(lowerCaseRow).map(val => (val || '').toString());
+
+                // keyColumns만으로 키 생성 (rowId 제외)
+                return keyValues.join('|');
+            };
+
+            // 데이터 처리 - 모든 키를 소문자로 통일
+            const processedRows = rows.map((row: any, rowIndex: number) => {
+                // 원본 row 데이터를 소문자 키로 변환
+                const lowerCaseRow: Record<string, any> = {};
+                Object.keys(row).forEach((key: string) => {
+                    const lowerKey = key.toLowerCase();
+                    lowerCaseRow[lowerKey] = row[key];
+                });
+
+                // processedRow 초기화
+                const processedRow: Record<string, any> = {
+                    __rowId: rowIndex,
+                    __dataItemKey: generateDataItemKey(lowerCaseRow),
+                };
+
+                // 각 컬럼에 대해 데이터 매핑 및 타입 변환
+                processedColumns.forEach(col => {
+                    const lowerColField = col.field;
+
+                    if (lowerCaseRow.hasOwnProperty(lowerColField)) {
+                        let value = lowerCaseRow[lowerColField];
+
+                        // 컬럼 타입에 따른 데이터 변환
+                        switch (col.type) {
+                            case 'number':
+                                if (value !== null && value !== undefined && value !== '') {
+                                    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                                    processedRow[lowerColField] = isNaN(numValue) ? 0 : numValue;
+                                } else {
+                                    processedRow[lowerColField] = 0;
+                                }
+                                break;
+                            case 'date':
+                                if (value && typeof value === 'string') {
+                                    if (value.length === 8 && /^\d{8}$/.test(value)) {
+                                        const year = parseInt(value.substring(0, 4));
+                                        const month = parseInt(value.substring(4, 6)) - 1;
+                                        const day = parseInt(value.substring(6, 8));
+                                        processedRow[lowerColField] = new Date(year, month, day);
+                                    } else {
+                                        processedRow[lowerColField] = new Date(value);
+                                    }
+                                } else {
+                                    processedRow[lowerColField] = value;
+                                }
+                                break;
+                            case 'boolean':
+                                processedRow[lowerColField] = Boolean(value);
+                                break;
+                            default:
+                                processedRow[lowerColField] = value !== null && value !== undefined ? String(value) : '';
+                        }
+                    } else {
+                        // 매칭되는 키가 없으면 타입에 따른 기본값
+                        switch (col.type) {
+                            case 'number':
+                                processedRow[lowerColField] = 0;
+                                break;
+                            case 'date':
+                                processedRow[lowerColField] = null;
+                                break;
+                            case 'boolean':
+                                processedRow[lowerColField] = false;
+                                break;
+                            default:
+                                processedRow[lowerColField] = '';
+                        }
+                    }
+                });
+
+                return processedRow;
+            });
+
+            setColumns(processedColumns);
+            setData(processedRows);
+            onDataLoad?.(processedRows);
+            onLoadingChange?.(false);
+
+            logger.info('✅ React Query 데이터 로드 완료:', {
+                columnCount: processedColumns.length,
+                rowCount: processedRows.length,
+            });
+            logger.debug('🔑 생성된 데이터 키 샘플 (상위 3개):', processedRows.slice(0, 3).map(r => r.__dataItemKey));
+        }
+    }, [queryResponse, keyColumns, columnOverrides, onDataLoad, onLoadingChange]);
+
+    // React Query 에러 처리
+    useEffect(() => {
+        if (queryError) {
+            const errorMsg = queryError.message || '데이터를 가져오는 중 오류가 발생했습니다.';
+            logger.error('React Query 에러:', errorMsg);
+            onError?.(errorMsg);
+            onLoadingChange?.(false);
+        }
+    }, [queryError, onError, onLoadingChange]);
 
     // 데이터 상태 변경 핸들러 (정렬, 필터, 페이징 통합 처리)
     const handleDataStateChange = (event: any) => {
@@ -298,17 +390,24 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
         }
     };
 
+    // Grid에 표시할 데이터 (useMemo를 사용하여 선택 상태를 동적으로 주입)
+    const dataWithSelection = useMemo(() => {
+        return data.map(item => ({
+            ...item,
+            selected: selectedKeys.has(item.__dataItemKey)
+        }));
+    }, [data, selectedKeys]);
+
+
     // 처리된 데이터 (정렬, 필터링, 페이징 적용)
     const processedData = useMemo(() => {
-        let result = data;
+        const result = dataWithSelection;
 
         // kendo-data-query의 process 함수를 사용하여 정렬, 필터링, 페이징 적용
-        if (showSort || showFilter || enablePaging) {
+        if (showSort || showFilter) {
             const processConfig = {
                 sort: showSort ? dataState.sort : undefined,
                 filter: showFilter ? dataState.filter : undefined,
-                skip: enablePaging ? dataState.skip : undefined,
-                take: enablePaging ? dataState.take : undefined,
             };
             const processResult = process(result, processConfig);
             return processResult;
@@ -318,29 +417,51 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
             data: result,
             total: result.length,
         };
-    }, [data, dataState, showSort, showFilter, enablePaging]);
+    }, [dataWithSelection, dataState, showSort, showFilter]);
 
     // 컬럼 렌더링 (hidden 컬럼 처리 추가)
     const renderColumns = () => {
+        const ColumnAny = Column as any; // 타입 우회용
+
         return columns
             .filter(col => !col.hidden) // hidden 컬럼 제외
-            .map((col) => (
-                <Column
-                    key={col.field}
-                    field={col.field}
-                    title={col.title}
-                    width={col.width}
-                    format={col.format}
-                    sortable={showSort && (col.sortable !== false)}
-                    columnMenu={showFilter && (col.filterable !== false) ? EumColumnMenu : undefined}
-                    headerClassName="eum-text-center"
-                    className={col.className}
-                />
-            ));
+            .map((col, index) => {
+                const isLocked = lockedColumns.includes(index);
+
+                // 컬럼 메뉴 컴포넌트 (필터가 활성화된 경우)
+                const columnMenuComponent = showFilter && (col.filterable !== false)
+                    ? (props: any) => (
+                        <EumColumnMenu
+                            {...props}
+                            gridData={processedData.data || data}
+                            originalData={data}
+                        />
+                    )
+                    : undefined;
+
+                return (
+                    <ColumnAny
+                        key={col.field}
+                        field={col.field}
+                        title={col.title}
+                        width={col.width}
+                        format={col.format}
+                        sortable={showSort && (col.sortable !== false)}
+                        columnMenu={columnMenuComponent}
+                        headerClassName={`eum-text-center ${isLocked ? 'eum-locked-header' : ''}`}
+                        className={`${col.className || ''} ${isLocked ? 'eum-locked-column' : ''}`.trim()}
+                        locked={isLocked}
+                        filter={(() => {
+                            return filterTypeMap[col.type as keyof typeof filterTypeMap] || 'text';
+                        })()}
+                        checkboxFilter={(col as any).checkboxFilter}
+                    />
+                );
+            });
     };
 
     // 에러 상태 렌더링
-    if (error) {
+    if (queryError) {
         return (
             <div
                 className={`custom-datagrid-error ${className}`}
@@ -355,9 +476,9 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
                 }}
             >
                 <h4>데이터 로드 오류</h4>
-                <p>{error}</p>
+                <p>{queryError.message}</p>
                 <button
-                    onClick={loadData}
+                    onClick={() => refetch()}
                     style={{
                         padding: '8px 16px',
                         backgroundColor: '#dc3545',
@@ -406,77 +527,85 @@ export const EumDataGrid = React.forwardRef<EumDataGridRef, EumDataGridProps>(({
         );
     }
 
+    // Kendo Grid 선택 상태 변경 핸들러 (onRowClick 기반으로 변경)
+    const handleRowClick = useCallback((event: any) => {
+        if (!isSelectable) return;
+
+        const clickedKey = event.dataItem?.__dataItemKey;
+        if (!clickedKey) {
+            logger.warn('🖱️ handleRowClick: 클릭된 행의 키(__dataItemKey)를 찾을 수 없습니다.', { event });
+            return;
+        }
+
+        const newSelectedKeys = new Set(selectedKeys);
+        if (newSelectedKeys.has(clickedKey)) {
+            newSelectedKeys.delete(clickedKey); // 이미 선택된 경우 -> 해제
+        } else {
+            if (selectionMode === 'single') {
+                newSelectedKeys.clear(); // 단일 선택 모드에서는 기존 선택 모두 해제
+            }
+            newSelectedKeys.add(clickedKey); // 새로 선택
+        }
+
+        logger.debug('🖱️ handleRowClick (개선된 토글)', {
+            clickedKey,
+            beforeCount: selectedKeys.size,
+            afterCount: newSelectedKeys.size
+        });
+        setSelectedKeys(newSelectedKeys);
+    }, [isSelectable, selectedKeys, selectionMode]);
+
+    // selectedKeys 상태가 변경될 때마다 부모 컴포넌트에 알림
+    useEffect(() => {
+        const newSelectedData = data.filter(item => selectedKeys.has(item.__dataItemKey));
+        const newSelectedIndices = newSelectedData.map(item => item.__rowId);
+
+        logger.debug('📞 onRowSelectionChange 콜백 실행', {
+            selectedKeysInEffect: Array.from(selectedKeys).slice(0, 3),
+            dataKeysInEffect: data.slice(0, 3).map(i => i.__dataItemKey),
+            finalSelectedCount: newSelectedIndices.length,
+        });
+
+        onRowSelectionChange?.(newSelectedIndices, newSelectedData);
+    }, [data, selectedKeys, onRowSelectionChange]);
+
     // 메인 그리드 렌더링
+    const GridComponent = Grid as any; // 타입 에러 우회
+
     return (
         <div
-            className={`custom-datagrid-container eum-grid-container ${className}`.trim()}
+            className={`eum-grid-container ${className}`.trim()}
             style={containerStyle}
         >
-            <Grid
+            <GridComponent
                 style={{ height }}
                 data={processedData}
+                dataItemKey="__dataItemKey"
+                selectedField="selected" // Kendo Grid가 'selected' 필드를 사용하여 선택 상태를 관리하도록 함
                 {...dataState}
                 onDataStateChange={handleDataStateChange}
+                selectable={{
+                    enabled: isSelectable,
+                    mode: selectionMode === 'single' ? 'single' : 'multiple',
+                }}
                 sortable={showSort ? {
                     allowUnsort: true,
-                    mode: 'single'
+                    mode: 'single' // 'multiple'로 변경 가능
                 } : false}
                 rowHeight={Number(rowheight)}
                 resizable={showResize}
-                pageable={enablePaging}
                 sort={dataState.sort}
-                {...kendoGridProps} // 모든 Kendo Grid props 전달
+                onRowClick={handleRowClick}
+                scrollable="virtual" // 가상 스크롤 활성화
+                {...kendoGridProps}
             >
                 {renderColumns()}
-            </Grid>
+            </GridComponent>
         </div>
     );
-});
+}));
 
 // displayName 설정 (개발 도구에서 컴포넌트 이름 표시)
 EumDataGrid.displayName = 'EumDataGrid';
-
-/**
- * 편의 함수: 빠른 DataGrid 요청 생성
- */
-export const createEumDataGridRequest = (
-    callId: string,
-    parameters?: (string | number)[],
-    parameterTypes?: string[],
-    userId: string = 'admin'
-): DataGridRequest => {
-    return {
-        callId,
-        parameters,
-        parametertype: parameterTypes,
-        metadata: createDefaultMetadata(userId),
-        timestamp: generateTimestamp(),
-    };
-};
-
-/**
- * 로그인한 유저 정보를 자동으로 사용하는 DataGrid 요청 생성 훅
- * 현재 로그인한 유저의 userId를 자동으로 기본값으로 사용합니다.
- * @returns DataGrid 요청 객체 생성 함수
- */
-export const useCreateEumDataGridRequest = () => {
-    const { user } = useAuthStore();
-
-    return (
-        callId: string,
-        parameters?: (string | number)[],
-        parameterTypes?: string[]
-    ): DataGridRequest => {
-        const userId = user?.userId || 'admin'; // 로그인 유저가 없으면 기본값 사용
-
-        return {
-            callId,
-            parameters,
-            parametertype: parameterTypes,
-            metadata: createDefaultMetadata(userId),
-            timestamp: generateTimestamp(),
-        };
-    };
-};
 
 export default EumDataGrid; 

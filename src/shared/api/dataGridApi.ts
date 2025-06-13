@@ -1,17 +1,17 @@
+import { useQuery, UseQueryResult, QueryKey } from '@tanstack/react-query';
+import { useMemo, useCallback } from 'react';
 import { apiClient } from './client';
 import logger from '@/shared/utils/logger';
+import { useAuthStore } from '@/shared/stores/authStore';
 
 // API 요청 타입 정의
 export interface DataGridRequest {
     callId: string;
     parameters?: (string | number)[];
     parametertype?: string[];
-    metadata: {
-        source: string;
-        requestId: string;
-        userId: string;
-    };
-    timestamp: string;
+    userId?: string;
+    requestId?: string;
+    timestamp?: string;
 }
 
 // 새로운 API 응답 구조에 맞춘 타입 정의
@@ -79,7 +79,7 @@ export const fetchDataGridData = async (request: DataGridRequest): Promise<DataG
             url,
             callId: request.callId,
             parametersCount: requestBody.parameters.length,
-            userId: request.metadata.userId
+            userId: request.userId
         });
 
         const response = await apiClient.post<DataGridResponse>(url, requestBody, {
@@ -123,6 +123,7 @@ export const fetchDataGridData = async (request: DataGridRequest): Promise<DataG
  * 헤더 정보를 GridColumn으로 변환하는 함수
  */
 export const convertHeadersToColumns = (headers: GridHeader[], datafields: GridDataField[]): GridColumn[] => {
+
     return headers.map((header, index) => {
         const datafield = datafields[index];
 
@@ -214,11 +215,11 @@ export const convertHeadersToColumns = (headers: GridHeader[], datafields: GridD
             format = '{0:n0}'; // 정수 포맷
         }
 
-        return {
-            field: datafield?.name || `col_${index}`,
+        const column: GridColumn = {
+            field: (datafield?.name || `col_${index}`).toLowerCase(), // 컬럼명을 소문자로 통일
             title: header.columnname,
             type,
-            width: header.width > 0 ? `${header.width}px` : undefined,
+            width: header.width > 0 ? `${header.width}px` : '150px', // width가 0 이하면 기본값 150px 할당
             format,
             filterable: true,
             sortable: true,
@@ -226,6 +227,9 @@ export const convertHeadersToColumns = (headers: GridHeader[], datafields: GridD
             textAlign,
             className,
         };
+
+
+        return column;
     });
 };
 
@@ -237,12 +241,115 @@ export const generateTimestamp = (): string => {
 };
 
 /**
- * 기본 메타데이터를 생성하는 헬퍼 함수
+ * React Query를 사용한 DataGrid 데이터 로드 훅
+ * 자동으로 중복 요청 제거 및 로딩 상태 관리를 제공합니다. (캐싱 비활성화)
+ * 
+ * @param request - DataGrid 요청 객체
+ * @param options - React Query 옵션
+ * @returns UseQueryResult with DataGrid data
  */
-export const createDefaultMetadata = (userId: string = 'admin'): DataGridRequest['metadata'] => {
+export const useDataGridQuery = (
+    request: DataGridRequest,
+    options?: {
+        enabled?: boolean;
+    }
+): UseQueryResult<DataGridResponse, Error> => {
+    // React Query의 키는 직렬화 가능하고 안정적인 값의 배열이어야 합니다.
+    // request 객체 또는 그 안의 배열/객체의 참조가 변경되더라도
+    // 내용이 같으면 동일한 쿼리로 인식되도록 useMemo와 JSON.stringify를 사용합니다.
+    const queryKey: QueryKey = useMemo(() => [
+        'dataGrid',
+        request.callId,
+        request.userId || 'admin',
+        // parameters와 parametertype 배열을 문자열로 만들어 키의 안정성 확보
+        JSON.stringify(request.parameters || []),
+        JSON.stringify(request.parametertype || []),
+    ], [
+        request.callId,
+        request.userId,
+        request.parameters,
+        request.parametertype
+    ]);
+
+    return useQuery({
+        queryKey,
+        queryFn: () => {
+            // API를 호출할 때는 항상 최신 타임스탬프와 요청 ID를 사용합니다.
+            // queryKey는 캐시 식별용, 실제 요청 파라미터는 여기서 최종 조립합니다.
+            const apiRequest: DataGridRequest = {
+                ...request,
+                parameters: request.parameters || [],
+                parametertype: request.parametertype || [],
+                timestamp: generateTimestamp(),
+                userId: request.userId || 'admin',
+                requestId: `REQ-${Date.now()}` // 매 호출마다 고유한 ID 생성
+            };
+
+            logger.debug('🔄 React Query API Fetched', {
+                queryKey,
+                callId: apiRequest.callId,
+            });
+
+            return fetchDataGridData(apiRequest);
+        },
+        enabled: options?.enabled ?? true,
+        staleTime: 1000, // 1초간 동일 요청에 대해 캐시된 데이터 반환
+        gcTime: 5 * 60 * 1000, // 5분간 캐시 유지
+        refetchOnMount: false, // 마운트 시 자동 리페치 비활성화
+        refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 리페치 비활성화
+        refetchOnReconnect: true, // 네트워크 재연결 시만 자동 갱신
+        networkMode: 'always', // 네트워크 상태와 관계없이 실행
+        retry: (failureCount, error: any) => {
+            // 401, 403 에러는 재시도하지 않음
+            if (error?.response?.status === 401 || error?.response?.status === 403) {
+                return false;
+            }
+            return failureCount < 2; // 재시도 횟수 줄임
+        },
+    });
+};
+
+/**
+ * 편의 함수: 빠른 DataGrid 요청 생성
+ */
+export const createEumDataGridRequest = (
+    callId: string,
+    parameters?: (string | number)[],
+    parameterTypes?: string[],
+    userId: string = 'admin'
+): DataGridRequest => {
     return {
-        source: 'web',
-        requestId: `REQ-${Date.now()}`,
+        callId,
+        parameters,
+        parametertype: parameterTypes,
         userId,
+        requestId: `REQ-${Date.now()}`,
+        timestamp: generateTimestamp(),
     };
+};
+
+/**
+ * 로그인한 유저 정보를 자동으로 사용하는 DataGrid 요청 생성 훅
+ * 현재 로그인한 유저의 userId를 자동으로 기본값으로 사용합니다.
+ * @returns DataGrid 요청 객체 생성 함수 (useCallback으로 메모이제이션됨)
+ */
+export const useCreateEumDataGridRequest = () => {
+    const { user } = useAuthStore();
+
+    return useCallback((
+        callId: string,
+        parameters?: (string | number)[],
+        parameterTypes?: string[]
+    ): DataGridRequest => {
+        const userId = user?.userId || 'admin'; // 로그인 유저가 없으면 기본값 사용
+
+        return {
+            callId,
+            parameters,
+            parametertype: parameterTypes,
+            userId,
+            requestId: `REQ-${Date.now()}`,
+            timestamp: generateTimestamp(),
+        };
+    }, [user?.userId]); // user.userId가 변경될 때만 함수 재생성
 }; 

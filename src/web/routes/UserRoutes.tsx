@@ -1,10 +1,9 @@
 import { RouteObject } from 'react-router-dom';
 import Layout from '@/shared/components/Layout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
-import UserOverview from '@/web/pages/UserOverview';
+import UserOverview from '@/web/pages/demo/UserOverview';
 import PhotoPage from '@/web/pages/demo/PhotoPage';
 import DatagridPage from '@/web/pages/demo/DatagridPage';
-// import UserProfilePage from '../pages/UserProfilePage'; // 예시
 
 const userRoutes: RouteObject[] = [
     {
@@ -16,7 +15,7 @@ const userRoutes: RouteObject[] = [
         ),
         children: [
             {
-                path: "overview",
+                path: "demo/overview",
                 element: <UserOverview />
             },
             {
@@ -26,11 +25,7 @@ const userRoutes: RouteObject[] = [
             {
                 path: "demo/datagrid",
                 element: <DatagridPage />
-            },
-            // {
-            //     path: "settings",
-            //     element: <UserProfilePage />
-            // },
+            }
         ]
     }
 ];
