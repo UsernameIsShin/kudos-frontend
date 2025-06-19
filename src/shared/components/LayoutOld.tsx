@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { X, User, LogOut, Globe, ChevronDown, ChevronUp } from "lucide-react";
+import { X, User, LogOut, Globe } from "lucide-react";
 import { useAuthStore } from "@/shared/stores/authStore";
 import logger from "@/shared/utils/logger";
 import KendoLocalizationProvider from "@/shared/components/KendoLocalizationProvider";
-import getPathLabelMapping from "@/constants/pathLabelMapping";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,20 +21,25 @@ interface LayoutProps {
 
 interface BreadcrumbPath {
   path: string;
-  label: React.ReactNode;
+  label: string;
 }
 
-interface MenuItem {
-  label: string;
-  href?: string;
-  icon?: React.ReactNode;
-  children?: MenuItem[];
-}
+const getPathLabelMapping = (t: Function): Record<string, string> => ({
+  "/": t("common:navigation.home"),
+  "/admin": t("common:navigation.admin"),
+  "/admin/dashboard": t("admin:dashboard.title"),
+  "/user": t("common:navigation.userSpace"),
+  "/user/overview": t("user:overview.title"),
+  "/user/demo": t("common:navigation.demo"),
+  "/user/demo/photos": t("demo:photoPage.title"),
+  "/user/demo/datagrid": t("demo:dataGridPage.title"),
+  "/user/demo/datagrid-rq": "React Query DataGrid",
+});
 
 const generateBreadcrumbs = (
   pathname: string,
-  pathLabelMapping: Record<string, React.ReactNode>,
-  homeLabel: React.ReactNode
+  pathLabelMapping: Record<string, string>,
+  homeLabel: string
 ): BreadcrumbPath[] => {
   const pathSegments = pathname.split("/").filter((segment) => segment);
   const breadcrumbs: BreadcrumbPath[] = [{ label: homeLabel, path: "/" }];
@@ -44,13 +48,6 @@ const generateBreadcrumbs = (
   for (const segment of pathSegments) {
     currentPath += `/${segment}`;
     const mappedLabel = pathLabelMapping[currentPath];
-    if (
-      mappedLabel === undefined ||
-      mappedLabel === null ||
-      mappedLabel === ""
-    ) {
-      continue;
-    }
     const label =
       mappedLabel || segment.charAt(0).toUpperCase() + segment.slice(1);
     if (!breadcrumbs.find((bc) => bc.path === currentPath) || mappedLabel) {
@@ -62,27 +59,22 @@ const generateBreadcrumbs = (
 
 export default function Layout({ variant }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
   const { t, i18n } = useTranslation([
     "common",
     "admin",
     "user",
-    "contents",
+    "demo",
     "auth",
   ]);
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const pathLabelMapping = getPathLabelMapping();
+  const pathLabelMapping = getPathLabelMapping(t);
   const breadcrumbItems = generateBreadcrumbs(
     location.pathname,
     pathLabelMapping,
-    <img
-      src="/images/home-4-fill-1.png"
-      alt="Home"
-      style={{ width: 20, height: 20, verticalAlign: "middle" }}
-    />
+    t("common:navigation.home")
   );
 
   const handleLogout = () => {
@@ -98,160 +90,29 @@ export default function Layout({ variant }: LayoutProps) {
     logger.debug(`Language changed to: ${newLang}`);
   };
 
-  // 2단 메뉴 예시
-  const adminMenuItems: MenuItem[] = [
+  const adminMenuItems = [
     { label: t("admin:dashboard.title"), href: "/admin/dashboard", icon: "📊" },
   ];
 
-  const userMenuItems: MenuItem[] = [
+  const userMenuItems = [
     {
-      label: "대시보드",
-      icon: (
-        <img
-          src="/images/home-4-fill-1.png"
-          alt="대시보드"
-          style={{ width: 20, height: 20 }}
-        />
-      ),
-      href: "/user/assets/overview",
+      label: t("user:overview.title"),
+      href: "/user/demo/overview",
+      icon: "📈",
     },
     {
-      label: "투자자산 현황",
-      icon: (
-        <img
-          src="/images/hand-coin-fill-1-2.png"
-          alt="투자자산 현황"
-          style={{ width: 20, height: 20 }}
-        />
-      ),
-      children: [
-        { label: "자산현황", href: "/user/assets/overview" },
-        { label: "기간별 투자현황", href: "/user/assets/photos" },
-      ],
+      label: t("common:navigation.photoPageLink"),
+      href: "/user/demo/photos",
+      icon: "📸",
     },
     {
-      label: "포트폴리오 관리",
-      icon: (
-        <img
-          src="/images/home-4-fill-1.png"
-          alt="포트폴리오 관리"
-          style={{ width: 20, height: 20 }}
-        />
-      ),
-      href: "/user/assets/datagrid",
-    },
-    {
-      label: "조합 관리",
-      icon: (
-        <img
-          src="/images/home-4-fill-1.png"
-          alt="조합 관리"
-          style={{ width: 20, height: 20 }}
-        />
-      ),
-      href: "/user/assets/overview",
-    },
-    {
-      label: "결재 문서",
-      icon: (
-        <img
-          src="/images/home-4-fill-1.png"
-          alt="결재 문서"
-          style={{ width: 20, height: 20 }}
-        />
-      ),
-      href: "/user/assets/overview",
-    },
-    {
-      label: "관리자 설정",
-      icon: (
-        <img
-          src="/images/home-4-fill-1.png"
-          alt="관리자 설정"
-          style={{ width: 20, height: 20 }}
-        />
-      ),
-      href: "/user/assets/overview",
+      label: t("common:navigation.dataGridPageLink"),
+      href: "/user/demo/datagrid",
+      icon: "🗂️",
     },
   ];
 
   const menuItems = variant === "admin" ? adminMenuItems : userMenuItems;
-
-  const handleMenuToggle = (label: string) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [label]: !prev[label],
-    }));
-  };
-
-  // 메뉴 렌더 함수
-  const renderMenu = (items: MenuItem[]) => (
-    <ul>
-      {items.map((item) => {
-        const hasChildren = !!item.children && item.children.length > 0;
-        const isOpen = openMenus[item.label];
-        const isActive =
-          (item.href && location.pathname.startsWith(item.href)) ||
-          (hasChildren &&
-            item.children!.some(
-              (child) => child.href && location.pathname.startsWith(child.href!)
-            ));
-
-        return (
-          <li key={item.label}>
-            <div
-              className={cn(
-                "group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer",
-                isActive
-                  ? "bg-gray-100 text-primary-600"
-                  : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            >
-              <span className="mr-3 text-lg">{item.icon}</span>
-              {hasChildren ? (
-                <>
-                  <span
-                    onClick={() => handleMenuToggle(item.label)}
-                    className="flex-1"
-                  >
-                    {item.label}
-                  </span>
-                  <span onClick={() => handleMenuToggle(item.label)}>
-                    {isOpen ? (
-                      <ChevronUp size={16} />
-                    ) : (
-                      <ChevronDown size={16} />
-                    )}
-                  </span>
-                </>
-              ) : (
-                <Link to={item.href!}>{item.label}</Link>
-              )}
-            </div>
-            {hasChildren && isOpen && (
-              <ul className="ml-6">
-                {item.children!.map((child) => (
-                  <li key={child.href}>
-                    <Link
-                      to={child.href!}
-                      className={cn(
-                        "group flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                        location.pathname.startsWith(child.href!)
-                          ? "bg-gray-100 text-primary-600"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      )}
-                    >
-                      {child.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -283,7 +144,21 @@ export default function Layout({ variant }: LayoutProps) {
           </button>
         </div>
         <nav className="mt-6 flex-1 px-2 space-y-1">
-          {renderMenu(menuItems)}
+          {menuItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                "group flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                location.pathname.startsWith(item.href)
+                  ? "bg-gray-100 text-primary-600"
+                  : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              )}
+            >
+              <span className="mr-3 text-lg">{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
         </nav>
         {/* User info at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">

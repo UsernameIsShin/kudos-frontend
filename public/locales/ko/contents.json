@@ -1,0 +1,19 @@
+{
+  "assets": {
+    "title": "투자자산 현황",
+    "assetStatus": "자산현황",
+    "investmentStatusByPeriod": "기간별투자현황"
+  },
+  "portfolio": {
+    "title": "포트폴리오관리"
+  },
+  "unions": {
+    "title": "조합관리"
+  },
+  "approvals": {
+    "title": "결재 문서"
+  },
+  "settings": {
+    "title": "관리자 설정"
+  }
+}

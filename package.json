@@ -20,6 +20,7 @@
         "@progress/kendo-react-dropdowns": "^11.0.0",
         "@progress/kendo-react-grid": "^11.0.0",
         "@progress/kendo-react-intl": "^11.0.0",
+        "@progress/kendo-theme-fluent": "^11.0.2",
         "@progress/kendo-theme-material": "^11.0.2",
         "@radix-ui/react-dialog": "^1.1.14",
         "@radix-ui/react-popover": "^1.1.14",
