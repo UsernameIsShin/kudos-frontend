@@ -20,7 +20,6 @@ import {
 import PageHeader from "@/shared/components/common/PageHeader";
 import EditForm from "./components/editForm.tsx";
 import { Product } from "./components/gd-interfaces.ts";
-import products from "./components/gd-products.ts";
 
 export type GridProduct = Record<string, any>;
 
@@ -38,9 +37,16 @@ export default function DatagridPage() {
   const [selectedCount, setSelectedCount] = useState(0);
 
   // 🔥 선택된 행 데이터 상태 추가
-  const [selectedRow, setSelectedRow] = useState<Product | null>(null);
+  const [selectedRow, setSelectedRow] = useState<GridProduct | null>(null);
   // EditForm 오픈 상태
   const [editFormOpen, setEditFormOpen] = useState(false);
+  // Edit 하려는 컬럼명
+  const editColumnHeaders: Record<string, string> = {
+    td: "일자",
+    code: "코드",
+    f_kn: "종목명",
+    close_p: "종가",
+  };
 
   // 검색 관련 상태
   const [searchText, setSearchText] = useState("");
@@ -96,15 +102,16 @@ export default function DatagridPage() {
   }, []);
 
   // 행 선택 변경 핸들러 (useCallback으로 참조 안정화)
-  //const handleRowSelectionChange = useCallback((selectedData: Product[]) => {
   const handleRowSelectionChange = useCallback(
-    (selectedData: GridProduct[]) => {
-      setSelectedCount(selectedData.length);
-      setSelectedRow(
-        selectedData && selectedData.length > 0 ? selectedData[0] : null
-      );
+    (selectedIndexes: number[]) => {
+      setSelectedCount(selectedIndexes.length);
+
+      const selected =
+        selectedIndexes.length > 0 ? currentData[selectedIndexes[0]] : null;
+
+      setSelectedRow(selected);
     },
-    []
+    [currentData]
   );
 
   // keyColumns prop 안정화 (useMemo 사용)
@@ -212,7 +219,7 @@ export default function DatagridPage() {
     logger.info("그리드 상태 초기화 완료");
   };
 
-  // '데이터 추가'(=선택 행 수정) 버튼 클릭 시
+  // '데이터 수정'(=선택 행 수정) 버튼 클릭 시
   const handleEditSelectedRow = () => {
     if (selectedRow) {
       setEditFormOpen(true);
@@ -222,11 +229,12 @@ export default function DatagridPage() {
   };
 
   // EditForm에서 저장/취소 시 EditForm 닫기
-  const handleSubmit = (newDataItem: Product) => {
-    // 데이터 업데이트 로직 (간단히 예시)
+  const handleSubmit = (newDataItem: GridProduct) => {
     setCurrentData((prev) =>
       prev.map((row) =>
-        row.ProductID === newDataItem.ProductID ? newDataItem : row
+        row.td === newDataItem.td && row.code === newDataItem.code
+          ? newDataItem
+          : row
       )
     );
     setEditFormOpen(false);
@@ -242,9 +250,10 @@ export default function DatagridPage() {
       {/* -- 팝업 EditForm -- */}
       {editFormOpen && selectedRow && (
         <EditForm
+          item={selectedRow}
+          columnHeaders={editColumnHeaders} // 추가
           cancelEdit={handleCancelEdit}
           onSubmit={handleSubmit}
-          item={selectedRow}
         />
       )}
 

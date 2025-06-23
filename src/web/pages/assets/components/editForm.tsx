@@ -1,129 +1,59 @@
+// components/editForm.tsx
+import React from "react";
 import { Dialog, DialogActionsBar } from "@progress/kendo-react-dialogs";
-import {
-  Form,
-  Field,
-  FormElement,
-  FieldRenderProps,
-  FieldWrapper,
-} from "@progress/kendo-react-form";
-import { TextBox, NumericTextBox } from "@progress/kendo-react-inputs";
-import { DropDownList } from "@progress/kendo-react-dropdowns";
-import { Error, Label } from "@progress/kendo-react-labels";
 import { Button } from "@progress/kendo-react-buttons";
-import categories from "./gd-categories.ts";
-import { Product } from "./gd-interfaces.ts";
-import { cancelIcon, saveIcon } from "@progress/kendo-svg-icons";
 
 interface EditFormProps {
+  item: Record<string, any>;
+  columnHeaders?: Record<string, string>;
+  onSubmit: (data: Record<string, any>) => void;
   cancelEdit: () => void;
-  onSubmit: (event: any) => void;
-  item: Partial<Product>;
 }
 
-const minValueValidator = (value: number) =>
-  value >= 0 ? "" : "The value must be 0 or higher";
-const NonNegativeNumericInput = (fieldRenderProps: FieldRenderProps) => {
-  const { validationMessage, visited, id, valid, label, ...others } =
-    fieldRenderProps;
+const EditForm: React.FC<EditFormProps> = ({
+  item,
+  columnHeaders = {},
+  onSubmit,
+  cancelEdit,
+}) => {
+  const [formData, setFormData] = React.useState(item);
+
+  const handleChange = (key: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = () => {
+    onSubmit(formData);
+  };
+
   return (
-    <>
-      <Label editorId={id} editorValid={valid} className={"k-form-label"}>
-        {label}
-      </Label>
-      <div className={"k-form-field-wrap"}>
-        <NumericTextBox {...others} />
-        {visited && validationMessage && <Error>{validationMessage}</Error>}
+    <Dialog title="Edit" onClose={cancelEdit}>
+      <div style={{ maxHeight: 300, overflowY: "auto", padding: 10 }}>
+        {Object.entries(formData)
+          .filter(([key]) => key in columnHeaders) // ❗️헤더 매핑이 있는 key만 렌더링
+          .map(([key, value]) => (
+            <div key={key} style={{ marginBottom: 8 }}>
+              <label style={{ display: "block", fontWeight: "bold" }}>
+                {columnHeaders[key] || key}
+              </label>
+              <input
+                className="k-textbox"
+                type="text"
+                value={value}
+                onChange={(e) => handleChange(key, e.target.value)}
+                style={{ width: "100%" }}
+              />
+            </div>
+          ))}
       </div>
-    </>
+      <DialogActionsBar>
+        <Button themeColor="primary" onClick={handleSubmit}>
+          Update
+        </Button>
+        <Button onClick={cancelEdit}>Cancel</Button>
+      </DialogActionsBar>
+    </Dialog>
   );
 };
 
-const TextBoxField = (fieldRenderProps: FieldRenderProps) => {
-  const { validationMessage, visited, label, id, valid, ...others } =
-    fieldRenderProps;
-  return (
-    <>
-      <Label editorId={id} className={"k-form-label"}>
-        {label}
-      </Label>
-      <div className={"k-form-field-wrap"}>
-        <TextBox {...others} />
-      </div>
-    </>
-  );
-};
-
-const EditForm = (props: EditFormProps) => {
-  const { cancelEdit, onSubmit, item, ...other } = props;
-
-  return (
-    <Form
-      initialValues={item}
-      onSubmit={onSubmit}
-      render={(renderProps) => (
-        <Dialog
-          title={`Edit ${item.ProductName}`}
-          onClose={cancelEdit}
-          style={{ maxWidth: "650px" }}
-        >
-          <FormElement>
-            <FieldWrapper>
-              <Field
-                name={"ProductName"}
-                component={TextBoxField}
-                label={"Product Name"}
-              />
-            </FieldWrapper>
-            <FieldWrapper>
-              <Label editorId={"Category"} className={"k-form-label"}>
-                {"Category"}
-              </Label>
-              <div className={"k-form-field-wrap"}>
-                <Field
-                  id={"Category"}
-                  name={"Category"}
-                  component={DropDownList}
-                  data={categories}
-                  textField={"CategoryName"}
-                />
-              </div>
-            </FieldWrapper>
-            <FieldWrapper>
-              <Field
-                name={"UnitPrice"}
-                component={NonNegativeNumericInput}
-                label={"Price"}
-                validator={minValueValidator}
-              />
-            </FieldWrapper>
-            <FieldWrapper>
-              <Field
-                name={"UnitsInStock"}
-                component={NonNegativeNumericInput}
-                label={"In stock"}
-                validator={minValueValidator}
-              />
-            </FieldWrapper>
-          </FormElement>
-          <DialogActionsBar layout="start">
-            <Button
-              type={"submit"}
-              themeColor={"primary"}
-              disabled={!renderProps.allowSubmit}
-              onClick={renderProps.onSubmit}
-              icon="save"
-              svgIcon={saveIcon}
-            >
-              Update
-            </Button>
-            <Button onClick={cancelEdit} icon="cancel" svgIcon={cancelIcon}>
-              Cancel
-            </Button>
-          </DialogActionsBar>
-        </Dialog>
-      )}
-      {...other}
-    />
-  );
-};
 export default EditForm;
