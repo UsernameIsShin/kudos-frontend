@@ -20,6 +20,7 @@ const getPathLabelMapping = (): Record<string, React.ReactNode> => ({
   "/user/assets": "투자자산 현황",
   "/user/assets/overview": "자산현황",
   "/user/assets/photos": "기간별 투자현황",
+  "/user/assets/datagrid": "기간별 투자현황",
   "/user/portfolio": "포트폴리오 관리",
   "/user/unions": "조합 관리",
   "/user/approvals": "결재 문서",

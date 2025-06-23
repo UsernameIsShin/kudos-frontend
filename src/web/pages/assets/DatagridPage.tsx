@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { DatePicker } from "@progress/kendo-react-dateinputs";
 import { Button } from "@progress/kendo-react-buttons";
@@ -17,6 +17,12 @@ import {
   getYearsAgo,
   parseYYYYMMDDToDate,
 } from "@/shared/utils/dateUtils";
+import PageHeader from "@/shared/components/common/PageHeader";
+import EditForm from "./components/editForm.tsx";
+import { Product } from "./components/gd-interfaces.ts";
+import products from "./components/gd-products.ts";
+
+export type GridProduct = Record<string, any>;
 
 export default function DatagridPage() {
   const { t } = useTranslation(["common", "contents"]);
@@ -24,61 +30,22 @@ export default function DatagridPage() {
   const [endDate, setEndDate] = useState<string>(getToday());
   const [loading, setLoading] = useState(false);
 
-  // 1. useState / useRef 추가
-  const [searchText, setSearchText] = useState("");
-  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
-  const suggestionBoxRef = useRef<HTMLDivElement>(null);
-
-  // 2. 검색어 입력 핸들러
-  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchText(value);
-
-    if (!value.trim()) {
-      setSearchSuggestions([]);
-      return;
-    }
-
-    //console.log(currentData[0]); // 첫 행 구조 확인
-
-    const targetColumns = ["code", "f_kn"]; // 원하는 컬럼들
-    const matches = currentData
-      .flatMap((row, rowIndex) =>
-        Object.entries(row).flatMap(([key, cellValue]) => {
-          if (
-            targetColumns.includes(key) &&
-            cellValue?.toString().toLowerCase().includes(value.toLowerCase())
-          ) {
-            return [{ rowIndex, columnKey: key, value: cellValue }];
-          }
-          return [];
-        })
-      )
-      .slice(0, 5);
-
-    //console.log("추천 데이터:", searchSuggestions);
-
-    setSearchSuggestions(matches);
-  };
-
-  // 3. 추천 선택 시 셀로 이동
-  const handleSuggestionSelect = (rowIndex: number, columnKey: string) => {
-    setSearchSuggestions([]);
-    setSearchText("");
-
-    if (gridRef.current?.focusCell) {
-      gridRef.current.focusCell(rowIndex, columnKey);
-    } else {
-      logger.warn("focusCell 메서드가 gridRef에 구현되어 있어야 합니다.");
-    }
-  };
-
   // EumDataGrid ref for data manipulation
   const gridRef = useRef<EumDataGridRef>(null);
 
   // 데이터 조작 관련 상태들
   const [currentData, setCurrentData] = useState<any[]>([]);
   const [selectedCount, setSelectedCount] = useState(0);
+
+  // 🔥 선택된 행 데이터 상태 추가
+  const [selectedRow, setSelectedRow] = useState<Product | null>(null);
+  // EditForm 오픈 상태
+  const [editFormOpen, setEditFormOpen] = useState(false);
+
+  // 검색 관련 상태
+  const [searchText, setSearchText] = useState("");
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const suggestionBoxRef = useRef<HTMLDivElement>(null);
 
   // 로그인한 유저 정보를 자동으로 사용하는 요청 생성 함수 (안정화됨)
   const createRequest = useCreateEumDataGridRequest();
@@ -129,9 +96,16 @@ export default function DatagridPage() {
   }, []);
 
   // 행 선택 변경 핸들러 (useCallback으로 참조 안정화)
-  const handleRowSelectionChange = useCallback((selectedData: any[]) => {
-    setSelectedCount(selectedData.length);
-  }, []);
+  //const handleRowSelectionChange = useCallback((selectedData: Product[]) => {
+  const handleRowSelectionChange = useCallback(
+    (selectedData: GridProduct[]) => {
+      setSelectedCount(selectedData.length);
+      setSelectedRow(
+        selectedData && selectedData.length > 0 ? selectedData[0] : null
+      );
+    },
+    []
+  );
 
   // keyColumns prop 안정화 (useMemo 사용)
   const keyColumns = useMemo(() => ["td", "code"], []);
@@ -150,20 +124,47 @@ export default function DatagridPage() {
     []
   );
 
-  // ---------------------------------------------------------------------
-  // columnOverrides 사용 예시 (주석)
-  // 특정 컬럼에 대해 필터 타입, 너비, 스타일 등을 개별적으로 오버라이드할 수 있습니다.
-  // 아래 예시는 두 컬럼의 checkboxFilter 값을 제어하는 방법입니다.
-  //
-  // const columnOverrides = useMemo(() => ({
-  //     // 문자열 컬럼이지만 기본 필터(text)로 사용하고 싶은 경우
-  //     name: { checkboxFilter: false },
-  //	 // 불리언 컬럼을 체크박스 필터로 강제 지정하고 너비도 조정
-  //     status: { checkboxFilter: true, width: 120 },
-  // }), []);
-  // ---------------------------------------------------------------------
+  // 추천어 입력 핸들러
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchText(value);
 
-  // 데이터 조작 함수들
+    if (!value.trim()) {
+      setSearchSuggestions([]);
+      return;
+    }
+
+    const targetColumns = ["code", "f_kn"]; // 원하는 컬럼들
+    const matches = currentData
+      .flatMap((row, rowIndex) =>
+        Object.entries(row).flatMap(([key, cellValue]) => {
+          if (
+            targetColumns.includes(key) &&
+            cellValue?.toString().toLowerCase().includes(value.toLowerCase())
+          ) {
+            return [{ rowIndex, columnKey: key, value: cellValue }];
+          }
+          return [];
+        })
+      )
+      .slice(0, 5);
+
+    setSearchSuggestions(matches);
+  };
+
+  // 추천어 선택 핸들러
+  const handleSuggestionSelect = (rowIndex: number, columnKey: string) => {
+    setSearchSuggestions([]);
+    setSearchText("");
+
+    if (gridRef.current?.focusCell) {
+      gridRef.current.focusCell(rowIndex, columnKey);
+    } else {
+      logger.warn("focusCell 메서드가 gridRef에 구현되어 있어야 합니다.");
+    }
+  };
+
+  // 데이터 조회 등 컨트롤 함수
   const handleGetData = () => {
     const data = gridRef.current?.getData();
     logger.debug("전체 데이터 조회:", data?.length, "건");
@@ -187,7 +188,6 @@ export default function DatagridPage() {
   };
 
   const handleTestSelection = () => {
-    // 첫 번째 행을 프로그래밍 방식으로 선택
     gridRef.current?.selectRows([0]);
     logger.info("프로그래밍 방식으로 첫 번째 행 선택 시도");
   };
@@ -212,13 +212,47 @@ export default function DatagridPage() {
     logger.info("그리드 상태 초기화 완료");
   };
 
+  // '데이터 추가'(=선택 행 수정) 버튼 클릭 시
+  const handleEditSelectedRow = () => {
+    if (selectedRow) {
+      setEditFormOpen(true);
+    } else {
+      alert("수정할 행을 먼저 선택하세요!");
+    }
+  };
+
+  // EditForm에서 저장/취소 시 EditForm 닫기
+  const handleSubmit = (newDataItem: Product) => {
+    // 데이터 업데이트 로직 (간단히 예시)
+    setCurrentData((prev) =>
+      prev.map((row) =>
+        row.ProductID === newDataItem.ProductID ? newDataItem : row
+      )
+    );
+    setEditFormOpen(false);
+  };
+  const handleCancelEdit = () => setEditFormOpen(false);
+
   return (
     <div className="container mx-auto p-4 max-w-7xl">
+      <section>
+        <PageHeader />
+      </section>
+
+      {/* -- 팝업 EditForm -- */}
+      {editFormOpen && selectedRow && (
+        <EditForm
+          cancelEdit={handleCancelEdit}
+          onSubmit={handleSubmit}
+          item={selectedRow}
+        />
+      )}
+
       <h1 className="text-2xl font-bold mb-6">
         {t("demo:dataGridPage.title")}
       </h1>
 
-      {/* 상단 검색 영역 */}
+      {/* -- 상단 검색 영역 -- */}
       <div className="mb-6 p-4 border rounded-md bg-gray-50 relative">
         <div className="flex flex-wrap items-center gap-4 mb-4">
           <div className="flex items-center gap-2">
@@ -264,7 +298,7 @@ export default function DatagridPage() {
             type="text"
             value={searchText}
             onChange={handleSearchInputChange}
-            className="border rounded px-2 py-1 w-150" // 종료일자와 동일한 너비
+            className="border rounded px-2 py-1 w-150"
             placeholder="검색어를 입력하세요"
             autoComplete="on"
           />
@@ -276,8 +310,6 @@ export default function DatagridPage() {
             검색
           </Button>
         </div>
-
-        {/* 추천 결과 드롭다운 */}
         {searchSuggestions.length > 0 && (
           <div
             ref={suggestionBoxRef}
@@ -298,9 +330,8 @@ export default function DatagridPage() {
         )}
       </div>
 
-      {/* 데이터 조작 컨트롤 패널 */}
+      {/* -- 데이터 조작 컨트롤 패널 -- */}
       <div className="mb-6 p-4 border rounded-md bg-blue-50">
-        {/* 데이터 조회 버튼들 */}
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-700 mb-2">
             데이터 조회
@@ -317,10 +348,22 @@ export default function DatagridPage() {
             >
               선택된 데이터 조회
             </Button>
+            <Button
+              size="small"
+              themeColor="info"
+              onClick={handleEditSelectedRow}
+            >
+              데이터 수정
+            </Button>
+            <Button
+              size="small"
+              themeColor="info"
+              onClick={handleEditSelectedRow}
+            >
+              데이터 추가
+            </Button>
           </div>
         </div>
-
-        {/* 데이터 변경 버튼들 */}
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-700 mb-2">
             행 선택 제어
@@ -342,8 +385,6 @@ export default function DatagridPage() {
             </Button>
           </div>
         </div>
-
-        {/* 그리드 상태 제어 버튼들 */}
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-700 mb-2">
             그리드 상태 제어
@@ -367,8 +408,6 @@ export default function DatagridPage() {
             </Button>
           </div>
         </div>
-
-        {/* 현재 상태 정보 */}
         <div className="bg-white p-3 rounded border">
           <h4 className="text-sm font-medium text-gray-700 mb-2">현재 상태</h4>
           <div className="text-sm text-gray-600 space-y-1">
@@ -378,8 +417,8 @@ export default function DatagridPage() {
         </div>
       </div>
 
-      {/* 커스텀 DataGrid */}
-      <div className="border rounded-md shadow-sm overflow-hidden">
+      {/* -- 데이터 그리드 -- */}
+      <div>
         <EumDataGrid
           ref={gridRef}
           request={gridRequest}
@@ -389,12 +428,10 @@ export default function DatagridPage() {
           onDataLoad={handleDataLoad}
           onDataChange={handleDataChange}
           onRowSelectionChange={handleRowSelectionChange}
-          // 행 선택 및 키 설정
           enableRowSelection={true}
           selectionMode="single"
           keyColumns={keyColumns}
           gridOptions={gridOptions}
-          // columnOverrides={columnOverrides} // 필요 시 주석 해제하여 사용
         />
       </div>
     </div>
